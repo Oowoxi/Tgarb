@@ -1,0 +1,109 @@
+javascript:(function(){
+    if(window.isAutoBotRunning) return;
+    window.isAutoBotRunning = true;
+
+    document.body.innerHTML = '';
+    document.body.style.margin = '0';
+    document.body.style.overflow = 'hidden';
+
+    let iframe = document.createElement('iframe');
+    iframe.src = location.href;
+    iframe.style.width = '100vw';
+    iframe.style.height = '100vh';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    let step = 0;
+    let lastTime = Date.now();
+
+    function runBot() {
+        try {
+            let doc = iframe.contentWindow.document;
+            let now = Date.now();
+
+            // 1. الانتظار 5 ثوانٍ كما كان سابقاً لضمان ظهور زر الدخول
+            if (step === 0 && (now - lastTime > 5000)) {
+                let loginBtn = Array.from(doc.querySelectorAll('.th-login-btn')).find(el => el.offsetParent !== null);
+                if (loginBtn) {
+                    loginBtn.click();
+                    step = 1;
+                    lastTime = now;
+                }
+            } 
+            // 2. الانتظار 4 ثوانٍ بعد ضغط الدخول لضمان اكتمال تحميل الموقع
+            else if (step === 1 && (now - lastTime > 4000)) {
+                let usersBtn = doc.querySelector('.th-d0-users');
+                if (usersBtn) {
+                    usersBtn.click();
+                    step = 2;
+                    lastTime = now;
+                }
+            }
+            // --- من هنا تبدأ السرعة القصوى ---
+            // 3. كتابة البحث (انتظار أجزاء بسيطة من الثانية)
+            else if (step === 2 && (now - lastTime > 300)) {
+                let searchInput = doc.getElementById('usearch');
+                if (searchInput) {
+                    searchInput.value = "87";
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    searchInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+                    step = 3;
+                    lastTime = now;
+                }
+            }
+            // 4. النقر على المستخدم 
+            else if (step === 3 && (now - lastTime > 500)) {
+                let visibleUsers = Array.from(doc.querySelectorAll('#users .uzr.uhtml')).filter(el => el.offsetParent !== null);
+                if (visibleUsers.length > 0) {
+                    visibleUsers[0].click();
+                    step = 4;
+                    lastTime = now;
+                }
+            }
+            // 5. النقر على النجمة 
+            else if (step === 4 && (now - lastTime > 400)) {
+                let starBtn = doc.querySelector('#upro .stars-users .star5');
+                if (starBtn) {
+                    starBtn.click();
+                }
+                step = 5;
+                lastTime = now;
+            }
+            // 6. إغلاق البروفايل 
+            else if (step === 5 && (now - lastTime > 300)) {
+                let closeBtn = doc.querySelector('#upro .fa-times');
+                if (closeBtn) closeBtn.click();
+                step = 6;
+                lastTime = now;
+            }
+            // 7. فتح الإعدادات 
+            else if (step === 6 && (now - lastTime > 300)) {
+                let settingsBtn = doc.querySelector('.th-d0-settings');
+                if (settingsBtn) {
+                     settingsBtn.click();
+                }
+                step = 7;
+                lastTime = now;
+            }
+            // 8. تسجيل الخروج 
+            else if (step === 7 && (now - lastTime > 300)) {
+                let logoutBtn = doc.querySelector('label.SERT');
+                if (logoutBtn) {
+                    logoutBtn.click();
+                }
+                step = 8;
+                lastTime = now;
+            }
+            // 9. إعادة الدورة بعد ثانية واحدة من الخروج ليكون الموقع جاهزاً مجدداً
+            else if (step === 8 && (now - lastTime > 1000)) {
+                step = 0;
+                lastTime = now;
+            }
+        } catch(e) {
+        }
+    }
+
+    // سرعة الفحص عالية جداً (كل 100 ملي ثانية) لضمان تنفيذ الخطوات السريعة فوراً
+    setInterval(runBot, 100);
+    alert('تم تشغيل الإطار الوهمي!');
+})();

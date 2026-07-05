@@ -1,0 +1,72 @@
+javascript:(function() {
+    const targetUserId = "87";
+    const intervalTime = 60000; // دقيقة كاملة
+
+    function startAutoProcess() {
+        console.log("1. محاولة فتح قائمة المتواجدين من الأسفل...");
+        // استبدل '.bottom-players-box' بالكلاس الفعلي للمربع السفلي الذي يعرض عدد اللاعبين
+        let bottomBox = document.querySelector('.bottom-players-box'); 
+        
+        if (!bottomBox) {
+            console.log("لم يتم العثور على المربع السفلي، تأكد من الكلاس الصحيح.");
+            return;
+        }
+        bottomBox.click();
+
+        // انتظر نصف ثانية حتى تظهر القائمة الجانبية والبحث
+        setTimeout(() => {
+            console.log("2. الكتابة في خانة البحث...");
+            // استبدل '.search-input-class' بالكلاس الفعلي لخانة البحث في أعلى اليمين
+            let searchInput = document.querySelector('.search-input-class'); 
+            
+            if (searchInput) {
+                searchInput.value = targetUserId;
+                // إرسال إشارات للمتصفح بأن هناك كتابة حقيقية لتحديث القائمة فوراً
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                searchInput.dispatchEvent(new Event('keyup', { bubbles: true }));
+            }
+
+            // انتظر ثانية واحدة حتى تظهر نتائج الفلترة
+            setTimeout(() => {
+                console.log("3. الضغط على أول بروفايل يظهر في القائمة...");
+                // استبدل '.first-user-item' بكلاس أول عنصر يظهر في القائمة المفلترة
+                let firstProfile = document.querySelector('.first-user-item'); 
+                
+                if (firstProfile) {
+                    firstProfile.click();
+
+                    // انتظر ثانية لفتح نافذة البروفايل بالكامل
+                    setTimeout(() => {
+                        console.log("4. الضغط على النجوم فقط...");
+                        // هنا الحل للمشكلة الأولى: لا تضغط على الزر العام، بل ابحث عن أيقونة النجمة الفردية بالداخل
+                        // استبدل '.star-icon-only' بكلاس النجمة الدقيق داخل البروفايل (مثلاً .fa-star)
+                        let starOnly = document.querySelector('#upro .star-icon-only'); 
+                        
+                        if (starOnly) {
+                            starOnly.click();
+                            console.log("تم ضغط النجوم بنجاح.");
+                        } else {
+                            console.log("لم يتم العثور على عنصر النجمة الفردي.");
+                        }
+
+                        // انتظر ثانية أخيرة ثم أغلق البروفايل
+                        setTimeout(() => {
+                            console.log("5. إغلاق البروفايل...");
+                            let closeBtn = document.querySelector('#upro .fa-times');
+                            if (closeBtn) closeBtn.click();
+                        }, 1000);
+
+                    }, 1000);
+                } else {
+                    console.log("لم يظهر أي بروفايل في البحث.");
+                }
+            }, 1000);
+
+        }, 500);
+    }
+
+    // تشغيل الدورة لأول مرة فوراً، ثم جدولتها للتكرار كل دقيقة
+    startAutoProcess();
+    setInterval(startAutoProcess, intervalTime);
+    alert("تم تشغيل سكربت الأتمتة الذكي للعضو 87!");
+})();

@@ -1,0 +1,64 @@
+javascript:(function() {
+    const targetUserId = "87";
+    const intervalTime = 60000; // 60 ثانية
+
+    function runAutomation() {
+        console.log("1. فتح قائمة المتواجدين...");
+        // زر المتواجدين السفلي من الكود المصدري
+        let usersBtn = document.querySelector('.th-d0-users'); 
+        if (usersBtn) usersBtn.click();
+
+        // انتظار ثانية لفتح القائمة
+        setTimeout(() => {
+            console.log("2. جاري البحث عن " + targetUserId + "...");
+            // مربع البحث من الكود المصدري
+            let searchInput = document.getElementById('usearch'); 
+            if (searchInput) {
+                searchInput.value = targetUserId;
+                // إجبار الموقع على تحديث قائمة الأسماء برمجياً
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                searchInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            }
+
+            // انتظار ثانية ونصف حتى تظهر نتائج البحث
+            setTimeout(() => {
+                console.log("3. الدخول على أول بروفايل في القائمة...");
+                // اختيار أول عضو يظهر في قائمة البحث
+                let firstUser = document.querySelector('#users .uzr'); 
+                if (firstUser) {
+                    firstUser.click();
+
+                    // انتظار ثانية ونصف حتى يكتمل فتح البروفايل
+                    setTimeout(() => {
+                        console.log("4. الضغط على النجوم (النجمة الخامسة) فقط...");
+                        // الضغط على النجوم من الكود المصدري الخاص بشاتكم (تجاهل القلب تماماً)
+                        let starBtn = document.querySelector('#upro .stars-users .star5'); 
+                        if (starBtn) {
+                            starBtn.click();
+                            console.log("تم إعطاء النجوم بنجاح!");
+                        }
+
+                        // انتظار ثانية ثم إغلاق البروفايل
+                        setTimeout(() => {
+                            console.log("5. إغلاق البروفايل...");
+                            // زر علامة الإكس (X) من الكود المصدري
+                            let closeBtn = document.querySelector('#upro .fa-times');
+                            if (closeBtn) closeBtn.click();
+                            
+                            console.log("اكتملت الدورة! سيتم الإعادة بعد دقيقة.");
+                        }, 1000);
+
+                    }, 1500);
+                } else {
+                    console.log("لم يتم العثور على العضو، قد لا يكون متواجداً.");
+                }
+            }, 1500); 
+
+        }, 1000); 
+    }
+
+    // تشغيل السكربت فوراً، ثم جدولته ليعمل كل 60 ثانية
+    runAutomation();
+    setInterval(runAutomation, intervalTime);
+    alert("تم تفعيل السكربت! \n- سيفتح المتواجدين\n- يبحث عن 87\n- يفتح البروفايل\n- يضغط النجوم\n- يغلق\n(يعيد العملية كل دقيقة)");
+})();

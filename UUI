@@ -1,0 +1,68 @@
+javascript:(function() {
+    const targetUserId = "87";
+    const intervalTime = 60000; // 60 ثانية
+
+    // 1. الجدار الناري: منع الموقع من اكتشاف أنك في تبويب آخر
+    try {
+        Object.defineProperty(document, 'hidden', { value: false, writable: false });
+        Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: false });
+        document.hasFocus = () => true;
+        const block = (e) => { e.stopPropagation(); e.stopImmediatePropagation(); };
+        // تجميد أحداث الخروج والتركيز
+        ['visibilitychange', 'webkitvisibilitychange', 'blur', 'pagehide'].forEach(evt => {
+            document.addEventListener(evt, block, true);
+            window.addEventListener(evt, block, true);
+        });
+        console.log("تم تفعيل حماية بقاء الاتصال.");
+    } catch(e) { console.log(e); }
+
+    // 2. الكود الأساسي للضغط
+    function runAutomation() {
+        console.log("1. فتح قائمة المتواجدين...");
+        let usersBtn = document.querySelector('.th-d0-users'); 
+        if (usersBtn) usersBtn.click();
+
+        setTimeout(() => {
+            let searchInput = document.getElementById('usearch'); 
+            if (searchInput) {
+                searchInput.value = targetUserId;
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                searchInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            }
+
+            setTimeout(() => {
+                let visibleUsers = Array.from(document.querySelectorAll('#users .uzr.uhtml')).filter(el => el.offsetParent !== null);
+                if (visibleUsers.length > 0) {
+                    visibleUsers[0].click(); 
+
+                    setTimeout(() => {
+                        let starBtn = document.querySelector('#upro .stars-users .star5'); 
+                        if (starBtn) starBtn.click();
+
+                        setTimeout(() => {
+                            let closeBtn = document.querySelector('#upro .fa-times');
+                            if (closeBtn) closeBtn.click();
+                        }, 1000);
+                    }, 1500);
+                }
+            }, 1500); 
+        }, 1000); 
+    }
+
+    // 3. خدعة الـ Web Worker (لتشغيل العداد في الخلفية غصباً عن المتصفح)
+    const workerCode = `
+        setInterval(() => { postMessage('tick'); }, ${intervalTime});
+    `;
+    const blob = new Blob([workerCode], {type: 'application/javascript'});
+    const worker = new Worker(URL.createObjectURL(blob));
+    
+    // أول ما العامل المخفي يعطي إشارة مرور الدقيقة، ننفذ الكود
+    worker.onmessage = function() {
+        console.log("إشارة من الخلفية: تنفيذ الدورة الآن!");
+        runAutomation();
+    };
+
+    // تشغيل أول مرة
+    runAutomation();
+    alert("تم التفعيل! تقدر تفتح تبويب ثاني الحين.. الشات بيحسبك لسه موجود والسكربت بيشتغل من الخلفية.");
+})();

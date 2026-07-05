@@ -1,0 +1,42 @@
+javascript:(function() {
+    const userId = "87"; // رقم عضويتك
+    const interval = 60000; // 60 ثانية (دقيقة)
+
+    function autoStar() {
+        // 1. استدعاء الدالة الأصلية للموقع لفتح البروفايل مباشرة
+        if (typeof upro === "function") {
+            upro(userId);
+            console.log("تم فتح بروفايل " + userId);
+            
+            // 2. ننتظر ثانية عشان النافذة تفتح بالكامل
+            setTimeout(() => {
+                // البحث عن زر اللايك/النجمة بناءً على كود الموقع
+                let starBtn = document.querySelector('#upro .ulike');
+                if (starBtn) {
+                    starBtn.click();
+                    console.log("تم ضغط الزر بنجاح!");
+                }
+                
+                // 3. ننتظر ثانية ثانية ثم نقفل البروفايل
+                setTimeout(() => {
+                    let closeBtn = document.querySelector('#upro .fa-times');
+                    if (closeBtn) {
+                        closeBtn.click();
+                    } else if (typeof $ !== 'undefined') {
+                        // طريقة احتياطية للإغلاق باستخدام jQuery الخاصة بالموقع
+                        $('#upro').modal('hide');
+                    }
+                    console.log("تم إغلاق البروفايل.");
+                }, 1000);
+                
+            }, 1000);
+        } else {
+            console.log("يبدو أن دالة upro غير متوفرة في هذه الصفحة.");
+        }
+    }
+
+    // تشغيل السكربت فوراً أول مرة، ثم جدولته ليتكرر كل دقيقة
+    autoStar();
+    setInterval(autoStar, interval);
+    alert("تم تفعيل السكربت للعضو 87! البروفايل بيفتح ويضغط ويقفل تلقائياً كل دقيقة.");
+})();

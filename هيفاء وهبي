@@ -1,0 +1,66 @@
+javascript:(function(){
+    if(window.isAutoBotRunning) return;
+    window.isAutoBotRunning = true;
+
+    // تهيئة الصفحة بإطار وهمي لا ينقطع عند التحديث
+    document.body.innerHTML = '';
+    document.body.style.margin = '0';
+    document.body.style.overflow = 'hidden';
+
+    let iframe = document.createElement('iframe');
+    iframe.src = location.href;
+    iframe.style.width = '100vw';
+    iframe.style.height = '100vh';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    let step = 0;
+
+    function runBot() {
+        try {
+            let doc = iframe.contentWindow.document;
+            
+            // تسلسل الخطوات بدون أي انتظار (بأقصى سرعة)
+            if (step === 0) { // مرحلة تسجيل الدخول
+                let loginBtn = doc.querySelector('.th-login-btn');
+                if (loginBtn) { loginBtn.click(); step = 1; }
+            } 
+            else if (step === 1) { // فتح قائمة المتواجدين
+                let usersBtn = doc.querySelector('.th-d0-users');
+                if (usersBtn) { usersBtn.click(); step = 2; }
+            }
+            else if (step === 2) { // البحث عن الرقم
+                let searchInput = doc.getElementById('usearch');
+                if (searchInput) {
+                    searchInput.value = "87";
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    step = 3;
+                }
+            }
+            else if (step === 3) { // اختيار البروفايل
+                let user = doc.querySelector('#users .uzr.uhtml');
+                if (user) { user.click(); step = 4; }
+            }
+            else if (step === 4) { // إعطاء النجمة
+                let starBtn = doc.querySelector('#upro .stars-users .star5');
+                if (starBtn) { starBtn.click(); step = 5; }
+            }
+            else if (step === 5) { // إغلاق البروفايل
+                let closeBtn = doc.querySelector('#upro .fa-times');
+                if (closeBtn) { closeBtn.click(); step = 6; }
+            }
+            else if (step === 6) { // فتح الإعدادات
+                let settingsBtn = doc.querySelector('.th-d0-settings');
+                if (settingsBtn) { settingsBtn.click(); step = 7; }
+            }
+            else if (step === 7) { // تسجيل الخروج
+                let logoutBtn = doc.querySelector('label.SERT');
+                if (logoutBtn) { logoutBtn.click(); step = 0; }
+            }
+        } catch(e) { /* تجاهل أخطاء التحميل اللحظية */ }
+    }
+
+    // تشغيل المحرك كل 500 ملي ثانية (نصف ثانية) لضمان السرعة القصوى
+    setInterval(runBot, 500);
+    alert('تم تفعيل وضع السرعة القصوى! السكربت يعمل الآن بدون انتظار.');
+})();

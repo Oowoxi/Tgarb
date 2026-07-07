@@ -1,0 +1,77 @@
+javascript: (function () {
+  if (window.pipBotExists) {
+    console.log("مانع التوقف شغال بالفعل!");
+    return;
+  }
+  window.pipBotExists = true;
+
+  // 1. إنشاء لوحة رسم (Canvas) لتوليد فيديو وهمي
+  const canvas = document.createElement('canvas');
+  canvas.width = 10;
+  canvas.height = 10;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, 10, 10);
+
+  // 2. تحويل اللوحة إلى بث فيديو (Stream) بمعدل 30 إطار في الثانية
+  const stream = canvas.captureStream(30);
+
+  // 3. إنشاء عنصر الفيديو وتغذيته بالبث الوهمي
+  const video = document.createElement('video');
+  video.srcObject = stream;
+  video.muted = true; // الأهم: كتم الصوت حتى لا يحتكر سماعة الجوال
+  video.autoplay = true;
+  video.playsInline = true;
+  
+  // إخفاء الفيديو في الصفحة
+  Object.assign(video.style, {
+    position: "fixed",
+    bottom: "10px",
+    right: "10px",
+    width: "1px",
+    height: "1px",
+    opacity: "0",
+    pointerEvents: "none"
+  });
+  document.body.appendChild(video);
+
+  // 4. رسم زر لتشغيل الخاصية (لأن المتصفح يشترط ضغطة من المستخدم لتفعيل PiP)
+  const pipBtn = document.createElement("button");
+  Object.assign(pipBtn.style, {
+    position: "fixed",
+    top: "40px", // سيظهر تحت زر البوت الأساسي مباشرة
+    left: "10px",
+    zIndex: "99999",
+    width: "20px",
+    height: "20px",
+    borderRadius: "50%",
+    border: "2px solid #fff",
+    backgroundColor: "#3498db", // لونه أزرق لتمييزه عن زر البوت
+    cursor: "pointer",
+    boxShadow: "0 0 8px rgba(0,0,0,0.5)",
+  });
+  pipBtn.title = "تشغيل وضع الخلفية (PiP)";
+  document.body.appendChild(pipBtn);
+
+  // 5. تفعيل ميزة صورة داخل صورة عند الضغط
+  pipBtn.addEventListener("click", async () => {
+    try {
+      await video.play();
+      
+      // تحديث البكسلات باستمرار لضمان عدم قيام المتصفح بتجميد الفيديو لاعتباره صورة ثابتة
+      setInterval(() => {
+        ctx.fillStyle = ctx.fillStyle === '#000000' ? '#000001' : '#000000';
+        ctx.fillRect(0, 0, 10, 10);
+      }, 1000);
+
+      // طلب الدخول في وضع النافذة العائمة
+      await video.requestPictureInPicture();
+      pipBtn.style.backgroundColor = "#9b59b6"; // يتغير لونه للبنفسجي كدليل على العمل
+      console.log("تم تفعيل وضع الخلفية بنجاح");
+      
+    } catch (error) {
+      console.error("فشل تفعيل PiP:", error);
+      alert("فشل تفعيل وضع الخلفية. تأكد من إعطاء أذونات صورة داخل صورة (PiP) للمتصفح.");
+    }
+  });
+})();

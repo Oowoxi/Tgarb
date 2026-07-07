@@ -1,0 +1,23 @@
+javascript:(function(){
+  if(window.silentAudioContext) {
+    console.log("الخديعة الصامتة تعمل بالفعل");
+    return;
+  }
+  
+  // إنشاء سياق صوتي
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AudioContext();
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
+
+  // ضبط الصوت على صفر
+  gainNode.gain.value = 0; 
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  
+  oscillator.start();
+  window.silentAudioContext = ctx;
+  
+  console.log("تم تفعيل الخديعة الصامتة: المتصفح نشط الآن ولكن بدون صوت!");
+})();

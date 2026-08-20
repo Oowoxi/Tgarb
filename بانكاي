@@ -27,6 +27,16 @@ javascript:(function(){
     function visible(d, sel){
         return Array.from(d.querySelectorAll(sel)).filter(el => el.offsetParent !== null);
     }
+    // هل تم الدخول فعلاً؟ (زر "المتواجدين" لا يظهر إلا داخل الشات بعد الدخول)
+    function isLoggedIn(d){
+        let ub = d.querySelector('.th-d0-users');
+        return !!(ub && ub.offsetParent !== null);
+    }
+    // هل قائمة المستخدمين مفتوحة؟ (حقل البحث #usearch ظاهر فقط لما تكون القائمة مفتوحة)
+    function usersOpen(d){
+        let si = d.getElementById('usearch');
+        return !!(si && si.offsetParent !== null);
+    }
 
     // ====== تسجيل خروج صامت: ينفّذ خروج الموقع الحقيقي لكن يمنع تحديث الصفحة ======
     function installSoftLogout(w){
@@ -100,35 +110,68 @@ javascript:(function(){
                 lastTime = now;
                 lastProgress = now;
             }
-            // 2. الضغط على زر الدخول
+            // 2. التأكد من الدخول ثم الضغط على زر الدخول إذا لزم
             else if (step === 2 && (now - lastTime > 500)) {
-                let loginBtn = Array.from(d.querySelectorAll('.th-login-btn')).find(el => el.offsetParent !== null);
-                if (loginBtn) {
-                    loginBtn.click();
+                if (isLoggedIn(d)) {
+                    // أصلًا داخل الشات، نكمل مباشرة
                     step = 3;
                     lastTime = now;
                     lastProgress = now;
+                } else {
+                    let loginBtn = Array.from(d.querySelectorAll('.th-login-btn')).find(el => el.offsetParent !== null);
+                    if (loginBtn) {
+                        loginBtn.click();
+                        step = 3;
+                        lastTime = now;
+                        lastProgress = now;
+                    } else {
+                        // زر الدخول ما ظهر بعد، نعيد المحاولة
+                        lastTime = now;
+                        lastProgress = now;
+                    }
                 }
             }
-            // 3. الانتظار 4 ثوانٍ بعد الدخول ثم فتح قائمة المستخدمين
-            else if (step === 3 && (now - lastTime > 4000)) {
-                let usersBtn = d.querySelector('.th-d0-users');
-                if (usersBtn) {
-                    usersBtn.click();
+            // 3. الانتظار والتأكد أن الدخول نجح فعلاً قبل فتح قائمة المستخدمين
+            else if (step === 3) {
+                if (isLoggedIn(d)) {
+                    // الدخول نجح -> فتح قائمة المستخدمين (مرة واحدة فقط)
+                    if (!usersOpen(d)) {
+                        let usersBtn = d.querySelector('.th-d0-users');
+                        if (usersBtn) usersBtn.click();
+                    }
                     step = 4;
                     lastTime = now;
                     lastProgress = now;
-                }
-            }
-            // 4. البحث عن العضوية 87
-            else if (step === 4 && (now - lastTime > 300)) {
-                let si = d.getElementById('usearch');
-                if (si) {
-                    si.value = "87";
-                    fire(si);
-                    step = 5;
+                } else if (now - lastTime > 12000) {
+                    // الدخول ما نجح، نرجع نضغط زر الدخول من جديد
+                    step = 2;
                     lastTime = now;
                     lastProgress = now;
+                }
+            }
+            // 4. التأكد من فتح القائمة والدخول، ثم البحث عن العضوية 87
+            else if (step === 4 && (now - lastTime > 300)) {
+                if (!isLoggedIn(d)) {
+                    // ما دخل، نرجع لخطوة الدخول
+                    step = 2;
+                    lastTime = now;
+                    lastProgress = now;
+                } else if (!usersOpen(d)) {
+                    // القائمة لسا ما انفتحت، ننتظر قليلاً ثم نرجع نفتحها
+                    if (now - lastTime > 3000) {
+                        step = 3;
+                        lastTime = now;
+                        lastProgress = now;
+                    }
+                } else {
+                    let si = d.getElementById('usearch');
+                    if (si) {
+                        si.value = "87";
+                        fire(si);
+                        step = 5;
+                        lastTime = now;
+                        lastProgress = now;
+                    }
                 }
             }
             // 5. فتح بروفايل 87
@@ -160,15 +203,22 @@ javascript:(function(){
                     lastProgress = now;
                 }
             }
-            // 8. البحث عن العضوية 30
+            // 8. البحث عن العضوية 30 (مع التأكد أننا ما زلنا داخل الشات)
             else if (step === 8 && (now - lastTime > 300)) {
-                let si = d.getElementById('usearch');
-                if (si) {
-                    si.value = "30";
-                    fire(si);
-                    step = 9;
+                if (!isLoggedIn(d)) {
+                    // انقطع الدخول، نرجع لخطوة الدخول
+                    step = 2;
                     lastTime = now;
                     lastProgress = now;
+                } else {
+                    let si = d.getElementById('usearch');
+                    if (si) {
+                        si.value = "30";
+                        fire(si);
+                        step = 9;
+                        lastTime = now;
+                        lastProgress = now;
+                    }
                 }
             }
             // 9. فتح بروفايل 30

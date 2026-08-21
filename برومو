@@ -1,0 +1,271 @@
+javascript:(function(){
+    if(window.isAutoBotRunning) return;
+    window.isAutoBotRunning = true;
+
+    document.body.innerHTML = '';
+    document.body.style.margin = '0';
+    document.body.style.overflow = 'hidden';
+
+    let iframe = document.createElement('iframe');
+    iframe.src = location.href;
+    iframe.style.width = '100vw';
+    iframe.style.height = '100vh';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    let step = 0;
+    let lastTime = Date.now();
+    let lastProgress = Date.now();
+
+    function W(){ try { return iframe.contentWindow; } catch(e){ return null; } }
+    function D(){ try { return iframe.contentWindow.document; } catch(e){ return null; } }
+
+    function fire(el){
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    }
+    function visible(d, sel){
+        return Array.from(d.querySelectorAll(sel)).filter(el => el.offsetParent !== null);
+    }
+    function isLoggedIn(d){
+        let tl = d.getElementById('tlogins');
+        if (tl) {
+            if (tl.offsetParent === null) return true;
+            if (tl.style && tl.style.display === 'none') return true;
+            return false;
+        }
+        let ub = d.querySelector('.th-d0-users');
+        return !!(ub && ub.offsetParent !== null);
+    }
+    function usersOpen(d){
+        let si = d.getElementById('usearch');
+        return !!(si && si.offsetParent !== null);
+    }
+
+    function installSoftLogout(w){
+        if (!w || w.__softLogoutInstalled) return;
+        w.__softLogoutInstalled = true;
+
+        w.__botSoftLogout = function(){
+            var d = w.document;
+
+            var oReload = w.location.reload, oReplace = w.location.replace, oAssign = w.location.assign;
+            try { w.location.reload  = function(){ return false; }; } catch(e){}
+            try { w.location.replace = function(){ return false; }; } catch(e){}
+            try { w.location.assign = function(){ return false; }; } catch(e){}
+
+            try {
+                var m = w.TH_CHAT_RECONNECT_MANAGER_INSTANCE;
+                if (m && m.core && m.core.markIntentionalClose) m.core.markIntentionalClose(true);
+            } catch(e){}
+            try { if (typeof w.TH_MARK_INTENTIONAL_DISCONNECT_TIGERHOST === 'function') w.TH_MARK_INTENTIONAL_DISCONNECT_TIGERHOST(true); } catch(e){}
+            try { if (w.x_x && w.x_x.disconnect) w.x_x.disconnect(); } catch(e){}
+            try { if (w.x_x && w.x_x.close) w.x_x.close(); } catch(e){}
+
+            try { w.MY_T = ''; w.MY_CP = ''; w.TIGERHOST = null; w.M_ROOM = null; } catch(e){}
+            try { w.U_CASH = {}; w.U_X = {}; w.U_XR = {}; } catch(e){}
+            try { if (w.setv) w.setv('token', ''); } catch(e){}
+            try { if (w.setxv) w.setxv('token', ''); } catch(e){}
+            try { if (w.localStorage) w.localStorage.removeItem('token'); } catch(e){}
+
+            setTimeout(function(){
+                try { w.location.reload  = oReload; } catch(e){}
+                try { w.location.replace = oReplace; } catch(e){}
+                try { w.location.assign = oAssign; } catch(e){}
+                try {
+                    var tl = d.getElementById('tlogins');
+                    if (tl) { tl.style.display = ''; tl.style.visibility = 'visible'; }
+                } catch(e){}
+                try {
+                    if (w.$) {
+                        w.$('#tlogins').show();
+                        w.$('.ovr').remove();
+                        w.$('#dpnl').hide();
+                        w.$('.nav-tabs a[href="#l1"]').tab('show');
+                    }
+                } catch(e){}
+                try {
+                    var lst = d.getElementById('loginstat');
+                    if (lst) lst.textContent = 'تم تسجيل الخروج';
+                } catch(e){}
+            }, 800);
+
+            return false;
+        };
+
+        try { w.logout = w.__botSoftLogout; } catch(e){}
+    }
+
+    function runBot(){
+        try {
+            let w = W();
+            let d = D();
+            if (!w || !d) return;
+            let now = Date.now();
+
+            if (step === 0 && (now - lastTime > 5000)) {
+                let eyeBtn = d.querySelector('.fa-eye') || d.querySelector('#stealth-btn');
+                if (eyeBtn && eyeBtn.offsetParent !== null) eyeBtn.click();
+                installSoftLogout(w);
+                step = 2;
+                lastTime = now;
+                lastProgress = now;
+            }
+            else if (step === 2 && (now - lastTime > 500)) {
+                if (isLoggedIn(d)) {
+                    step = 3;
+                    lastTime = now;
+                    lastProgress = now;
+                } else {
+                    try {
+                        var m = w.TH_CHAT_RECONNECT_MANAGER_INSTANCE;
+                        if (m && m.core && m.core.markIntentionalClose) m.core.markIntentionalClose(false);
+                    } catch(e){}
+                    let loginBtn = Array.from(d.querySelectorAll('.th-login-btn')).find(el => el.offsetParent !== null);
+                    if (loginBtn) {
+                        loginBtn.click();
+                        step = 3;
+                        lastTime = now;
+                        lastProgress = now;
+                    } else {
+                        lastTime = now;
+                        lastProgress = now;
+                    }
+                }
+            }
+            else if (step === 3) {
+                if (isLoggedIn(d)) {
+                    if (!usersOpen(d)) {
+                        let usersBtn = d.querySelector('.th-d0-users');
+                        if (usersBtn) usersBtn.click();
+                    }
+                    step = 4;
+                    lastTime = now;
+                    lastProgress = now;
+                } else if (now - lastTime > 12000) {
+                    step = 2;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            else if (step === 4 && (now - lastTime > 300)) {
+                if (!isLoggedIn(d)) {
+                    step = 2;
+                    lastTime = now;
+                    lastProgress = now;
+                } else if (!usersOpen(d)) {
+                    if (now - lastTime > 3000) {
+                        step = 3;
+                        lastTime = now;
+                        lastProgress = now;
+                    }
+                } else {
+                    let si = d.getElementById('usearch');
+                    if (si) {
+                        si.value = "87";
+                        fire(si);
+                        step = 5;
+                        lastTime = now;
+                        lastProgress = now;
+                    }
+                }
+            }
+            else if (step === 5 && (now - lastTime > 500)) {
+                let us = visible(d, '#users .uzr.uhtml');
+                if (us.length > 0) {
+                    us[0].click();
+                    step = 6;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            else if (step === 6 && (now - lastTime > 500)) {
+                let cb = d.querySelector('#upro .fa-times');
+                if (cb) cb.click();
+                step = 7;
+                lastTime = now;
+                lastProgress = now;
+            }
+            else if (step === 7 && (now - lastTime > 300)) {
+                let si = d.getElementById('usearch');
+                if (si) {
+                    si.value = "";
+                    fire(si);
+                    step = 8;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            else if (step === 8 && (now - lastTime > 300)) {
+                if (!isLoggedIn(d)) {
+                    step = 2;
+                    lastTime = now;
+                    lastProgress = now;
+                } else {
+                    let si = d.getElementById('usearch');
+                    if (si) {
+                        si.value = "30";
+                        fire(si);
+                        step = 9;
+                        lastTime = now;
+                        lastProgress = now;
+                    }
+                }
+            }
+            else if (step === 9 && (now - lastTime > 500)) {
+                let us = visible(d, '#users .uzr.uhtml');
+                if (us.length > 0) {
+                    us[0].click();
+                    step = 10;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            else if (step === 10 && (now - lastTime > 500)) {
+                let cb = d.querySelector('#upro .fa-times');
+                if (cb) cb.click();
+                step = 11;
+                lastTime = now;
+                lastProgress = now;
+            }
+            else if (step === 11 && (now - lastTime > 300)) {
+                let sb = d.querySelector('.th-d0-settings');
+                if (sb) {
+                    sb.click();
+                    step = 12;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            else if (step === 12 && (now - lastTime > 300)) {
+                let lb = d.querySelector('label.SERT');
+                if (lb) {
+                    try { lb.setAttribute('onclick', 'window.__botSoftLogout ? window.__botSoftLogout() : false;'); } catch(e){}
+                    lb.click();
+                } else if (typeof w.__botSoftLogout === 'function') {
+                    w.__botSoftLogout();
+                }
+                step = 13;
+                lastTime = now;
+                lastProgress = now;
+            }
+            else if (step === 13 && (now - lastTime > 2000)) {
+                step = 2;
+                lastTime = now;
+                lastProgress = now;
+            }
+        } catch(e) {}
+    }
+
+    setInterval(function(){
+        if (Date.now() - lastProgress > 30000) {
+            try { iframe.src = iframe.src; } catch(e){}
+            step = 0;
+            lastTime = Date.now();
+            lastProgress = Date.now();
+        }
+    }, 2000);
+
+    setInterval(runBot, 100);
+    alert('تم تشغيل البوت مع الخروج الصارم (بدون تحديث الصفحة)!');
+})();

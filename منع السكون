@@ -1,0 +1,39 @@
+javascript:(function(){
+    if(window.keepAwakeActive) {
+        alert('وضع منع السكون شغال بالفعل على هذه الصفحة!');
+        return;
+    }
+    window.keepAwakeActive = true;
+
+    // 1. تفعيل واجهة منع قفل الشاشة
+    if ('wakeLock' in navigator) {
+        const requestWakeLock = async () => {
+            try {
+                window.myWakeLock = await navigator.wakeLock.request('screen');
+            } catch (err) {}
+        };
+        requestWakeLock();
+        
+        // إعادة التفعيل لو رجعت للصفحة
+        document.addEventListener('visibilitychange', () => {
+            if (window.myWakeLock !== null && document.visibilityState === 'visible') {
+                requestWakeLock();
+            }
+        });
+    }
+
+    // 2. تشغيل حيلة الصوت الصامت
+    let audio = document.createElement('audio');
+    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+    audio.loop = true;
+    
+    let playAttempt = setInterval(() => {
+        audio.play().then(() => {
+            clearInterval(playAttempt); // يوقف المحاولات بمجرد نجاح التشغيل
+        }).catch(() => {
+            // ينتظر لمسة المستخدم
+        });
+    }, 1000);
+
+    alert('✅ تم تفعيل وضع "منع السكون" بنجاح!\n\nالشاشة الآن لن تنطفئ.\n\n⚠️ تذكر: المس أي مكان في الصفحة مرة واحدة لتأكيد التشغيل.');
+})();

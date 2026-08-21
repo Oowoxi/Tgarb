@@ -1,0 +1,193 @@
+javascript:(function(){
+    if(window.isAutoBotRunning) return;
+    window.isAutoBotRunning = true;
+
+    document.body.innerHTML = '';
+    document.body.style.margin = '0';
+    document.body.style.overflow = 'hidden';
+
+    let iframe = document.createElement('iframe');
+    iframe.src = location.href;
+    iframe.style.width = '100vw';
+    iframe.style.height = '100vh';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    // --- 1. حيلة الصوت الصامت لمنع السكون ---
+    function keepAwake() {
+        let audio = document.createElement('audio');
+        audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        audio.loop = true;
+        
+        let playAttempt = setInterval(() => {
+            audio.play().then(() => {
+                console.log('الصوت الصامت شغال، المتصفح لن ينام!');
+                clearInterval(playAttempt);
+            }).catch(() => {});
+        }, 1000);
+    }
+    keepAwake();
+
+    // --- 2. واجهة منع قفل الشاشة ---
+    if ('wakeLock' in navigator) {
+        let wakeLock = null;
+        const requestWakeLock = async () => {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+            } catch (err) {}
+        };
+        requestWakeLock();
+        
+        document.addEventListener('visibilitychange', () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                requestWakeLock();
+            }
+        });
+    }
+
+    let step = 0;
+    let lastTime = Date.now();
+    let lastProgress = Date.now();
+
+    function W(){ try { return iframe.contentWindow; } catch(e){ return null; } }
+    function D(){ try { return iframe.contentWindow.document; } catch(e){ return null; } }
+
+    function fire(el){
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    }
+    function visible(d, sel){
+        return Array.from(d.querySelectorAll(sel)).filter(el => el.offsetParent !== null);
+    }
+
+    // تم إزالة دالة تسجيل الخروج واستبدالها بخدعة الوقت
+
+    function runBot(){
+        try {
+            let w = W();
+            let d = D();
+            if (!w || !d) return;
+            
+            // هذا الوقت خاص بالبوت الأساسي، لن يتأثر بالتزييف
+            let now = Date.now(); 
+
+            // ====== حل مشكلة كلاود فلاير ======
+            if (d.body) {
+                let pageText = d.body.innerText || "";
+                if ((pageText.includes('Error 1015') || pageText.includes('rate limited')) && step !== 99) {
+                    step = 99; 
+                    lastTime = now;
+                    lastProgress = now;
+                    setTimeout(() => {
+                        try { iframe.src = location.href; } catch(e){}
+                        step = 0; 
+                        lastTime = Date.now();
+                        lastProgress = Date.now();
+                    }, 10000); 
+                    return;
+                }
+                if (step === 99) return; 
+            }
+
+            // 0. الانتظار للتحميل الأولي
+            if (step === 0 && (now - lastTime > 5000)) {
+                let eyeBtn = d.querySelector('.fa-eye') || d.querySelector('#stealth-btn');
+                if (eyeBtn && eyeBtn.offsetParent !== null) eyeBtn.click();
+                step = 2;
+                lastTime = now;
+                lastProgress = now;
+            }
+            // 2. الضغط على زر الدخول
+            else if (step === 2 && (now - lastTime > 500)) {
+                let loginBtn = Array.from(d.querySelectorAll('.th-login-btn')).find(el => el.offsetParent !== null);
+                if (loginBtn) {
+                    loginBtn.click();
+                    step = 3;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 3. فتح قائمة المستخدمين
+            else if (step === 3 && (now - lastTime > 2000)) {
+                let usersBtn = d.querySelector('.th-d0-users');
+                if (usersBtn && usersBtn.offsetParent !== null) {
+                    usersBtn.click();
+                    step = 4;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 4. البحث عن العضوية 87
+            else if (step === 4 && (now - lastTime > 500)) {
+                let si = d.getElementById('usearch');
+                if (si && si.offsetParent !== null) {
+                    si.value = "94";
+                    fire(si);
+                    step = 5;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 5. فتح بروفايل 87
+            else if (step === 5 && (now - lastTime > 500)) {
+                let us = visible(d, '#users .uzr.uhtml');
+                if (us.length > 0) {
+                    us[0].click();
+                    step = 6;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 6. إغلاق بروفايل 87 
+            else if (step === 6 && (now - lastTime > 500)) {
+                let cb = d.querySelector('#upro .fa-times');
+                if (cb && cb.offsetParent !== null) {
+                    cb.click();
+                    step = 7; 
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 7. تزييف الوقت (تقديم دقيقتين)
+            else if (step === 7 && (now - lastTime > 300)) {
+                // نقوم بحقن الكود داخل الموقع (الإطار) لإيهامه بمرور الوقت
+                if (!w.timeOffsetBot) w.timeOffsetBot = 0;
+                w.timeOffsetBot += 120000; // إضافة دقيقتين في كل دورة
+                
+                if (!w.origDateNowBot) w.origDateNowBot = w.Date.now;
+                
+                // تعديل دالة الوقت الخاصة بالموقع
+                w.Date.now = function() { 
+                    return w.origDateNowBot.call(w) + w.timeOffsetBot; 
+                };
+                
+                step = 8;
+                lastTime = now;
+                lastProgress = now;
+            }
+            // 8. العودة لفتح البروفايل مباشرة (بدون بحث جديد لأن 87 لا زال ظاهر)
+            else if (step === 8 && (now - lastTime > 1500)) {
+                step = 5; // القفز للخطوة 5 لفتح البروفايل
+                lastTime = now;
+                lastProgress = now;
+            }
+        } catch(e) {}
+    }
+
+    setInterval(function(){
+        if (Date.now() - lastProgress > 30000 && step !== 99) {
+            try {
+                iframe.src = location.href;   
+            } catch(e){}
+            step = 0;
+            lastTime = Date.now();
+            lastProgress = Date.now();
+        }
+    }, 2000);
+
+    setInterval(runBot, 100);
+    
+    let alertMsg = 'تم التشغيل! البوت الآن يفتح البروفايل، يخدع المتصفح بتقديم الوقت، ثم يعيد الفتح.\n\n';
+    alertMsg += '⚠️ تنبيه: المس الشاشة مرة واحدة لتفعيل وضع منع السكون.';
+    alert(alertMsg);
+})();

@@ -1,0 +1,300 @@
+javascript:(function(){
+    if(window.isAutoBotRunning) return;
+    window.isAutoBotRunning = true;
+
+    document.body.innerHTML = '';
+    document.body.style.margin = '0';
+    document.body.style.overflow = 'hidden';
+
+    var iframe = document.createElement('iframe');
+    iframe.src = location.href;
+    iframe.style.width = '100vw';
+    iframe.style.height = '100vh';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    var TARGET1 = "87";
+    var TARGET2 = "30";
+    var step = 0;
+    var lastTime = Date.now();
+    var lastProgress = Date.now();
+    var lastClick = 0;
+    var deadline = 0;
+    var loginHTML = null;
+
+    function W(){ try { return iframe.contentWindow; } catch(e){ return null; } }
+    function D(){ try { return iframe.contentWindow.document; } catch(e){ return null; } }
+    function vis(el){ return !!(el && el.offsetParent !== null); }
+    function log(m){ try { console.log('[BOT] ' + m); } catch(e){} }
+
+    function setSearch(w, d, val){
+        var si = d.getElementById('usearch');
+        if (!si) return false;
+        si.value = val;
+        try { si.dispatchEvent(new Event('input',  { bubbles: true })); } catch(e){}
+        try { si.dispatchEvent(new Event('change', { bubbles: true })); } catch(e){}
+        try { si.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true })); } catch(e){}
+        try { si.dispatchEvent(new KeyboardEvent('keyup',   { bubbles: true })); } catch(e){}
+        try { if (w.$) w.$('#usearch').trigger('input').trigger('change').trigger('keyup'); } catch(e){}
+        try { if (typeof w.usearch === 'function') w.usearch(); } catch(e){}
+        return true;
+    }
+
+    function isLoggedIn(d){
+        var tl = d.getElementById('tlogins');
+        if (tl) return false;
+        var ub = d.querySelector('.th-d0-users');
+        return !!(ub && ub.offsetParent !== null);
+    }
+
+    function usersOpen(d){
+        var si = d.getElementById('usearch');
+        return !!(si && si.offsetParent !== null);
+    }
+
+    function profileOpen(d){
+        var up = d.getElementById('upro');
+        return !!(up && up.offsetParent !== null);
+    }
+
+    function findUserRow(d, target){
+        var rows = d.querySelectorAll('#users .uzr.uhtml');
+        for (var i = 0; i < rows.length; i++){
+            var r = rows[i];
+            if (r.offsetParent === null) continue;
+            var lid = (r.getAttribute('data-lid') || '').trim();
+            if (lid === target) return r;
+            var he = r.querySelector('.uhashe');
+            if (he && he.textContent.trim() === target) return r;
+        }
+        return null;
+    }
+
+    function installHardening(w){
+        if (!w || w.__botHardened) return;
+        w.__botHardened = true;
+        var noop = function(){ return false; };
+        try { w.location.reload  = noop; } catch(e){}
+        try { w.location.replace = noop; } catch(e){}
+        try { w.location.assign  = noop; } catch(e){}
+        try {
+            var proto = Object.getPrototypeOf(w.location);
+            var desc = Object.getOwnPropertyDescriptor(proto, 'href');
+            if (desc && desc.set) {
+                Object.defineProperty(w.location, 'href', {
+                    get: function(){ return desc.get.call(w.location); },
+                    set: function(){},
+                    configurable: true
+                });
+            }
+        } catch(e){}
+        try { w.open = function(){ return null; }; } catch(e){}
+        try { w.history.forward = noop; w.history.back = noop; w.history.go = function(){ return null; }; } catch(e){}
+        try { w.logout = function(){ return w.__botSoftLogout ? w.__botSoftLogout() : false; }; } catch(e){}
+    }
+
+    function restoreLogin(w){
+        try {
+            var d = w.document;
+            if (!loginHTML) {
+                var dad = d.querySelector('.dad');
+                if (dad) loginHTML = dad.outerHTML;
+            }
+            try { if (typeof w.TH_FORCE_CLEAR_RECONNECT_OVERLAY_TIGERHOST === 'function') w.TH_FORCE_CLEAR_RECONNECT_OVERLAY_TIGERHOST(); } catch(e){}
+            try { if (w.$) { w.$('.ovr').remove(); w.$('#TH_OVR_V3').remove(); w.$('#TH_CONN_OVERLAY').remove(); } } catch(e){}
+            var cur = d.querySelector('.dad');
+            if (cur && loginHTML) {
+                cur.outerHTML = loginHTML;
+                log('login screen restored');
+                return true;
+            }
+        } catch(e){}
+        return false;
+    }
+
+    function softLogout(w){
+        log('logout start');
+        try {
+            var m = w.TH_CHAT_RECONNECT_MANAGER_INSTANCE;
+            if (!m && w.TH_XT_GET_RECONNECT_MANAGER) { try { m = w.TH_XT_GET_RECONNECT_MANAGER(); } catch(e){} }
+            if (m && m.core && m.core.markIntentionalClose) m.core.markIntentionalClose(true);
+            if (m && m.hooks && m.hooks.markIntentionalDisconnect) m.hooks.markIntentionalDisconnect(true);
+        } catch(e){}
+        try { if (typeof w.TH_MARK_INTENTIONAL_DISCONNECT_TIGERHOST === 'function') w.TH_MARK_INTENTIONAL_DISCONNECT_TIGERHOST(true); } catch(e){}
+        try { if (w.x_x && w.x_x.disconnect) w.x_x.disconnect(); } catch(e){}
+        try { if (w.x_x && w.x_x.close) w.x_x.close(); } catch(e){}
+        try { w.MY_T=''; w.MY_CP=''; w.TIGERHOST=null; w.M_ROOM=null; } catch(e){}
+        try { w.U_CASH={}; w.U_X={}; w.U_XR={}; w.TH_ROOM_CACHE={}; } catch(e){}
+        try { if (w.localStorage) w.localStorage.removeItem('token'); } catch(e){}
+        restoreLogin(w);
+        setTimeout(function(){ restoreLogin(w); }, 800);
+        log('logout done');
+        return false;
+    }
+
+    function rearmSocket(w){
+        try {
+            var m = w.TH_CHAT_RECONNECT_MANAGER_INSTANCE;
+            if (!m && w.TH_XT_GET_RECONNECT_MANAGER) { try { m = w.TH_XT_GET_RECONNECT_MANAGER(); } catch(e){} }
+            if (m && m.core && m.core.markIntentionalClose) m.core.markIntentionalClose(false);
+            if (m && m.hooks && m.hooks.markIntentionalDisconnect) m.hooks.markIntentionalDisconnect(false);
+        } catch(e){}
+        try { if (w.x_x && typeof w.x_x.connect === 'function' && !w.x_x.connected) w.x_x.connect(); } catch(e){}
+        try { if (!w.x_x && typeof w.NEW_SOCKET === 'function') w.NEW_SOCKET(); } catch(e){}
+    }
+
+    function runBot(){
+        try {
+            var w = W();
+            var d = D();
+            if (!w || !d) return;
+            var now = Date.now();
+
+            if (step === 0){
+                if (now - lastTime > 5000){
+                    var dad = d.querySelector('.dad');
+                    if (dad) loginHTML = dad.outerHTML;
+                    var eye = d.querySelector('.fa-eye') || d.querySelector('#stealth-btn');
+                    if (eye && vis(eye)) eye.click();
+                    installHardening(w);
+                    step = 2; lastTime = now; deadline = 0; lastProgress = now; log('started');
+                }
+                return;
+            }
+            if (step === 2){
+                if (isLoggedIn(d)){
+                    step = 3; lastTime = now; deadline = 0; lastProgress = now;
+                } else {
+                    if (now - lastClick > 1500){
+                        rearmSocket(w);
+                        var btn = Array.prototype.slice.call(d.querySelectorAll('.th-login-btn')).filter(vis)[0];
+                        if (btn){ btn.click(); lastClick = now; lastProgress = now; log('click login'); }
+                    }
+                }
+                return;
+            }
+            if (step === 3){
+                if (!isLoggedIn(d)){ step = 2; lastTime = now; deadline = 0; lastProgress = now; return; }
+                if (usersOpen(d)){
+                    step = 4; lastTime = now; deadline = 0; lastProgress = now;
+                } else {
+                    if (now - lastClick > 800){
+                        var ub = d.querySelector('.th-d0-users');
+                        if (ub){ ub.click(); lastClick = now; lastProgress = now; }
+                    }
+                }
+                return;
+            }
+            if (step === 4){
+                if (!isLoggedIn(d)){ step = 2; lastTime = now; deadline = 0; lastProgress = now; return; }
+                if (!usersOpen(d)){ step = 3; lastTime = now; deadline = 0; lastProgress = now; return; }
+                setSearch(w, d, TARGET1);
+                step = 5; lastTime = now; deadline = now + 3000; lastProgress = now; log('search 87');
+                return;
+            }
+            if (step === 5){
+                if (!isLoggedIn(d)){ step = 2; lastTime = now; deadline = 0; lastProgress = now; return; }
+                if (now - lastTime < 900) return;
+                var row = findUserRow(d, TARGET1);
+                if (row){
+                    row.click();
+                    step = 6; lastTime = now; deadline = now + 2500; lastProgress = now; log('open 87');
+                } else if (now > deadline){
+                    setSearch(w, d, '');
+                    step = 7; lastTime = now; deadline = 0; lastProgress = now; log('87 not found, skip');
+                }
+                return;
+            }
+            if (step === 6){
+                if (profileOpen(d)){
+                    if (now - lastTime > 400){
+                        var cb = d.querySelector('#upro .fa-times');
+                        if (cb) cb.click();
+                        try { if (w.$) w.$('#upro').modal('hide'); } catch(e){}
+                        step = 7; lastTime = now; deadline = 0; lastProgress = now; log('close 87');
+                    }
+                } else if (now > deadline){
+                    step = 7; lastTime = now; deadline = 0; lastProgress = now;
+                }
+                return;
+            }
+            if (step === 7){
+                setSearch(w, d, '');
+                step = 8; lastTime = now; deadline = 0; lastProgress = now; log('clear');
+                return;
+            }
+            if (step === 8){
+                if (!isLoggedIn(d)){ step = 2; lastTime = now; deadline = 0; lastProgress = now; return; }
+                if (!usersOpen(d)){ step = 3; lastTime = now; deadline = 0; lastProgress = now; return; }
+                setSearch(w, d, TARGET2);
+                step = 9; lastTime = now; deadline = now + 3000; lastProgress = now; log('search 30');
+                return;
+            }
+            if (step === 9){
+                if (!isLoggedIn(d)){ step = 2; lastTime = now; deadline = 0; lastProgress = now; return; }
+                if (now - lastTime < 900) return;
+                var row2 = findUserRow(d, TARGET2);
+                if (row2){
+                    row2.click();
+                    step = 10; lastTime = now; deadline = now + 2500; lastProgress = now; log('open 30');
+                } else if (now > deadline){
+                    step = 11; lastTime = now; deadline = 0; lastProgress = now; log('30 not found, skip');
+                }
+                return;
+            }
+            if (step === 10){
+                if (profileOpen(d)){
+                    if (now - lastTime > 400){
+                        var cb2 = d.querySelector('#upro .fa-times');
+                        if (cb2) cb2.click();
+                        try { if (w.$) w.$('#upro').modal('hide'); } catch(e){}
+                        step = 11; lastTime = now; deadline = 0; lastProgress = now; log('close 30');
+                    }
+                } else if (now > deadline){
+                    step = 11; lastTime = now; deadline = 0; lastProgress = now;
+                }
+                return;
+            }
+            if (step === 11){
+                if (!isLoggedIn(d)){ step = 2; lastTime = now; deadline = 0; lastProgress = now; return; }
+                var sb = d.querySelector('.th-d0-settings');
+                if (sb) sb.click();
+                step = 12; lastTime = now; deadline = 0; lastProgress = now; log('settings');
+                return;
+            }
+            if (step === 12){
+                if (now - lastTime > 400){
+                    var lb = d.querySelector('label.SERT');
+                    if (lb && vis(lb)){
+                        lb.click();
+                        log('logout clicked');
+                    } else {
+                        softLogout(w);
+                        log('logout direct');
+                    }
+                    step = 13; lastTime = now; deadline = now + 5000; lastProgress = now;
+                }
+                return;
+            }
+            if (step === 13){
+                var atLogin = !isLoggedIn(d);
+                if (atLogin || now > deadline){
+                    if (!atLogin) restoreLogin(w);
+                    step = 2; lastTime = now; deadline = 0; lastProgress = now; log('restart');
+                }
+                return;
+            }
+        } catch(e){}
+    }
+
+    setInterval(function(){
+        if (Date.now() - lastProgress > 20000){
+            log('watchdog');
+            try { var w = W(); if (w){ restoreLogin(w); rearmSocket(w); } } catch(e){}
+            step = 2; lastTime = Date.now(); lastClick = 0; deadline = 0; lastProgress = Date.now();
+        }
+    }, 3000);
+
+    setInterval(runBot, 60);
+    alert('تم تشغيل البوت (النسخة الجذرية: بدون تحديث + استرجاع شاشة الدخول)');
+})();

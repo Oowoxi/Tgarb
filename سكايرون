@@ -164,7 +164,7 @@ javascript:(function(){
             else if (step === 8 && (now - lastTime > 300)) {
                 let si = d.getElementById('usearch');
                 if (si) {
-                    si.value = "30";
+                    si.value = "75";
                     fire(si);
                     step = 9;
                     lastTime = now;

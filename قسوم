@@ -1,0 +1,203 @@
+javascript:(function(){
+    if(window.isMasterSplitRunning) return;
+    window.isMasterSplitRunning = true;
+
+    document.body.innerHTML = '';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.overflow = 'hidden';
+    document.body.style.display = 'flex';
+    document.body.style.flexDirection = 'column';
+    document.body.style.height = '100vh';
+
+    // --- 1. الشاشة العليا: حسابك الأساسي ---
+    let f1 = document.createElement('iframe');
+    f1.src = location.href;
+    f1.style.width = '100%';
+    f1.style.height = '50vh';
+    f1.style.border = 'none';
+    f1.style.borderBottom = '3px solid #ffaa00';
+    document.body.appendChild(f1);
+
+    // --- 2. الشاشة السفلى: بوت البحث الآلي ---
+    let f2 = document.createElement('iframe');
+    f2.src = location.href;
+    f2.style.width = '100%';
+    f2.style.height = '50vh';
+    f2.style.border = 'none';
+    document.body.appendChild(f2);
+
+    // --- منع السكون والغياب للتبويب ---
+    function keepAwake() {
+        let audio = document.createElement('audio');
+        audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        audio.loop = true;
+        let playAttempt = setInterval(() => {
+            audio.play().then(() => { clearInterval(playAttempt); }).catch(() => {});
+        }, 1000);
+    }
+    keepAwake();
+
+    if ('wakeLock' in navigator) {
+        let wakeLock = null;
+        const reqLock = async () => { try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} };
+        reqLock();
+        document.addEventListener('visibilitychange', () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') reqLock();
+        });
+    }
+
+    // ==========================================
+    // محرك الشاشة العليا (تأخير 25 ثانية لتسجيل دخولك)
+    // ==========================================
+    function runAutoExit(){
+        try {
+            let d1 = f1.contentDocument;
+            if (!d1) return;
+            let exitBtn = d1.querySelector('.fa-sign-out, .fa-sign-out-alt, .fa-door-open, [onclick*="exit"], [onclick*="leave"], [onclick*="logout"], .exit');
+            if (exitBtn && exitBtn.offsetParent !== null) {
+                exitBtn.click();
+                console.log("[Top Frame] تم الخروج من الغرفة.");
+            }
+        } catch(e){}
+    }
+
+    // الانتظار 25 ثانية لتسجل دخولك بنفسك أولاً، ثم بدء الحلقة كل 3 دقائق
+    setTimeout(function(){
+        runAutoExit();
+        setInterval(runAutoExit, 3 * 60 * 1000);
+    }, 25000);
+
+    // ==========================================
+    // محرك الشاشة السفلى (البوت الآلي)
+    // ==========================================
+    let step = 0;
+    let lastTime = Date.now();
+    let lastProgress = Date.now();
+
+    function getRandomDelay(base) { return base + Math.floor(Math.random() * 500); }
+    function fire(el){
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    }
+    function visible(d, sel){
+        return Array.from(d.querySelectorAll(sel)).filter(el => el.offsetParent !== null);
+    }
+
+    function installSoftLogout(w){
+        if (!w || w.__softLogoutInstalled) return;
+        w.__softLogoutInstalled = true;
+        try { w.__botLoginTab = (w.$ && w.$('#l2').length && w.$('#l2').is(':visible')) ? '#l2' : '#l1'; } catch(e){ w.__botLoginTab = '#l1'; }
+        var origLogout = (typeof w.logout === 'function') ? w.logout : null;
+
+        w.logout = function(){
+            var oReload = w.location.reload, oReplace = w.location.replace, oAssign = w.location.assign;
+            var locked = true;
+            try { w.location.reload  = function(){ if (locked) return false; }; } catch(e){}
+            try { w.location.replace = function(){ if (locked) return false; }; } catch(e){}
+            try { w.location.assign = function(){ if (locked) return false; }; } catch(e){}
+
+            try { if (origLogout) origLogout(); } catch(e){}
+
+            try {
+                var m = w.TH_CHAT_RECONNECT_MANAGER_INSTANCE;
+                if (m && m.core && m.core.markIntentionalClose) m.core.markIntentionalClose(true);
+            } catch(e){}
+            try { if (typeof w.TH_MARK_INTENTIONAL_DISCONNECT_TIGERHOST === 'function') w.TH_MARK_INTENTIONAL_DISCONNECT_TIGERHOST(true); } catch(e){}
+            try { if (w.x_x && typeof w.x_x.disconnect === 'function') w.x_x.disconnect(); } catch(e){}
+            try { if (w.x_x && typeof w.x_x.close === 'function') w.x_x.close(); } catch(e){}
+            try { w.MY_T = ''; } catch(e){}
+            try { w.TIGERHOST = null; } catch(e){}
+            try { w.M_ROOM = null; } catch(e){}
+
+            setTimeout(function(){
+                locked = false;
+                try { w.location.reload  = oReload; } catch(e){}
+                try { w.location.replace = oReplace; } catch(e){}
+                try { w.location.assign = oAssign; } catch(e){}
+                try { if (w.$) w.$('.nav-tabs a[href="' + (w.__botLoginTab || '#l1') + '"]').tab('show'); } catch(e){}
+                try {
+                    var d = w.document;
+                    var closePanel = d.querySelector('#dpnl .fa-close') || d.querySelector('#dpnl .thMorePaneBackBtn');
+                    if (closePanel) closePanel.click();
+                } catch(e){}
+            }, 1000);
+        };
+    }
+
+    function runBot2(){
+        try {
+            let w2 = f2.contentWindow;
+            let d2 = f2.contentDocument;
+            if (!w2 || !d2) return;
+            let now = Date.now();
+
+            if (d2.body) {
+                let pageText = d2.body.innerText || "";
+                if ((pageText.includes('Error 1015') || pageText.includes('rate limited')) && step !== 99) {
+                    step = 99; lastTime = now; lastProgress = now;
+                    setTimeout(() => {
+                        try { f2.src = location.href; } catch(e){}
+                        step = 0; lastTime = Date.now(); lastProgress = Date.now();
+                    }, 15000);
+                    return;
+                }
+                if (step === 99) return;
+            }
+
+            if (step === 0 && (now - lastTime > 5000)) {
+                let eyeBtn = d2.querySelector('.fa-eye') || d2.querySelector('#stealth-btn');
+                if (eyeBtn && eyeBtn.offsetParent !== null) eyeBtn.click();
+                installSoftLogout(w2);
+                step = 2; lastTime = now; lastProgress = now;
+            }
+            else if (step === 2 && (now - lastTime > getRandomDelay(800))) {
+                let loginBtn = Array.from(d2.querySelectorAll('.th-login-btn')).find(el => el.offsetParent !== null);
+                if (loginBtn) { loginBtn.click(); step = 3; lastTime = now; lastProgress = now; }
+            }
+            else if (step === 3 && (now - lastTime > getRandomDelay(2000))) {
+                let usersBtn = d2.querySelector('.th-d0-users');
+                if (usersBtn && usersBtn.offsetParent !== null) { usersBtn.click(); step = 4; lastTime = now; lastProgress = now; }
+            }
+            else if (step === 4 && (now - lastTime > getRandomDelay(700))) {
+                let si = d2.getElementById('usearch');
+                if (si && si.offsetParent !== null) { si.value = "87"; fire(si); step = 5; lastTime = now; lastProgress = now; }
+            }
+            else if (step === 5 && (now - lastTime > getRandomDelay(700))) {
+                let us = visible(d2, '#users .uzr.uhtml');
+                if (us.length > 0) { us[0].click(); step = 6; lastTime = now; lastProgress = now; }
+            }
+            else if (step === 6 && (now - lastTime > getRandomDelay(700))) {
+                let cb = d2.querySelector('#upro .fa-times');
+                if (cb && cb.offsetParent !== null) { cb.click(); step = 7; lastTime = now; lastProgress = now; }
+            }
+            else if (step === 7 && (now - lastTime > getRandomDelay(500))) {
+                let sb = d2.querySelector('.th-d0-settings');
+                if (sb && sb.offsetParent !== null) { sb.click(); step = 8; lastTime = now; lastProgress = now; }
+            }
+            else if (step === 8 && (now - lastTime > getRandomDelay(500))) {
+                let lb = d2.querySelector('label.SERT');
+                if (lb && lb.offsetParent !== null) {
+                    lb.click();
+                } else if (typeof w2.logout === 'function') {
+                    w2.logout();
+                }
+                step = 9; lastTime = now; lastProgress = now;
+            }
+            else if (step === 9 && (now - lastTime > getRandomDelay(8000))) {
+                step = 2; lastTime = now; lastProgress = now;
+            }
+        } catch(e){}
+    }
+
+    setInterval(function(){
+        if (Date.now() - lastProgress > 45000 && step !== 99) {
+            try { f2.src = location.href; } catch(e){}
+            step = 0; lastTime = Date.now(); lastProgress = Date.now();
+        }
+    }, 2000);
+
+    setInterval(runBot2, 100);
+
+    alert('تم التشغيل!\n- الشاشة العليا: لديك 25 ثانية لتسجيل دخولك بنفسك قبل بدء حلقة الخروج.\n- الشاشة السفلى: البوت يعمل آلياً.');
+})();

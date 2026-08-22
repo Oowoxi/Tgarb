@@ -1,0 +1,207 @@
+javascript:(function(){
+    if(window.isTripleSplitRunning) return;
+    window.isTripleSplitRunning = true;
+
+    document.body.innerHTML = '';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.overflow = 'hidden';
+    document.body.style.display = 'flex';
+    document.body.style.flexDirection = 'column';
+    document.body.style.height = '100vh';
+
+    // --- 1. الإطار العلوي (حسابك الأساسي) ---
+    let f1 = document.createElement('iframe');
+    f1.src = location.href;
+    f1.style.cssText = 'width:100%; height:33vh; border:none; border-bottom:2px solid #ffaa00;';
+    document.body.appendChild(f1);
+
+    // --- 2. الإطار الأوسط (البوت الأول) ---
+    let f2 = document.createElement('iframe');
+    f2.src = location.href;
+    f2.style.cssText = 'width:100%; height:33vh; border:none; border-bottom:2px solid #00aaff;';
+    document.body.appendChild(f2);
+
+    // --- 3. الإطار السفلي (البوت الثاني) ---
+    let f3 = document.createElement('iframe');
+    f3.src = location.href;
+    f3.style.cssText = 'width:100%; flex:1; border:none;';
+    document.body.appendChild(f3);
+
+    // --- منع سكون التبويب الرئيسي ---
+    function keepAwake() {
+        let audio = document.createElement('audio');
+        audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        audio.loop = true;
+        let playAttempt = setInterval(() => {
+            audio.play().then(() => { clearInterval(playAttempt); }).catch(() => {});
+        }, 1000);
+    }
+    keepAwake();
+
+    if ('wakeLock' in navigator) {
+        let wakeLock = null;
+        const reqLock = async () => { try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} };
+        reqLock();
+        document.addEventListener('visibilitychange', () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') reqLock();
+        });
+    }
+
+    // ==========================================
+    // 1. محرك الإطار العلوي (الخروج القسري كل 60 ثانية)
+    // ==========================================
+    function forceExitClick(){
+        try {
+            let d1 = f1.contentDocument;
+            if (!d1) return;
+            let exitBtn = d1.querySelector('.fa-sign-out, .fa-sign-out-alt, .fa-door-open, [onclick*="exit"], [onclick*="leave"], [onclick*="logout"], .exit');
+            if (exitBtn) {
+                exitBtn.click();
+                exitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            }
+        } catch(e){}
+    }
+    setTimeout(function(){
+        forceExitClick();
+        setInterval(forceExitClick, 60 * 1000);
+    }, 25000);
+
+    // ==========================================
+    // 2. أدوات البوت والتحكم بالخروج الصامت
+    // ==========================================
+    function getRandomDelay(base) { return base + Math.floor(Math.random() * 500); }
+    function fire(el){
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    }
+    function visible(d, sel){
+        return Array.from(d.querySelectorAll(sel)).filter(el => el.offsetParent !== null);
+    }
+
+    function installSoftLogout(w){
+        if (!w || w.__softLogoutInstalled) return;
+        w.__softLogoutInstalled = true;
+        try { w.__botLoginTab = (w.$ && w.$('#l2').length && w.$('#l2').is(':visible')) ? '#l2' : '#l1'; } catch(e){ w.__botLoginTab = '#l1'; }
+        var origLogout = (typeof w.logout === 'function') ? w.logout : null;
+
+        w.logout = function(){
+            var oReload = w.location.reload, oReplace = w.location.replace, oAssign = w.location.assign;
+            var locked = true;
+            try { w.location.reload  = function(){ if (locked) return false; }; } catch(e){}
+            try { w.location.replace = function(){ if (locked) return false; }; } catch(e){}
+            try { w.location.assign = function(){ if (locked) return false; }; } catch(e){}
+
+            try { if (origLogout) origLogout(); } catch(e){}
+
+            try {
+                var m = w.TH_CHAT_RECONNECT_MANAGER_INSTANCE;
+                if (m && m.core && m.core.markIntentionalClose) m.core.markIntentionalClose(true);
+            } catch(e){}
+            try { if (typeof w.TH_MARK_INTENTIONAL_DISCONNECT_TIGERHOST === 'function') w.TH_MARK_INTENTIONAL_DISCONNECT_TIGERHOST(true); } catch(e){}
+            try { if (w.x_x && typeof w.x_x.disconnect === 'function') w.x_x.disconnect(); } catch(e){}
+            try { if (w.x_x && typeof w.x_x.close === 'function') w.x_x.close(); } catch(e){}
+            try { w.MY_T = ''; } catch(e){}
+            try { w.TIGERHOST = null; } catch(e){}
+            try { w.M_ROOM = null; } catch(e){}
+
+            setTimeout(function(){
+                locked = false;
+                try { w.location.reload  = oReload; } catch(e){}
+                try { w.location.replace = oReplace; } catch(e){}
+                try { w.location.assign = oAssign; } catch(e){}
+                try { if (w.$) w.$('.nav-tabs a[href="' + (w.__botLoginTab || '#l1') + '"]').tab('show'); } catch(e){}
+                try {
+                    var d = w.document;
+                    var closePanel = d.querySelector('#dpnl .fa-close') || d.querySelector('#dpnl .thMorePaneBackBtn');
+                    if (closePanel) closePanel.click();
+                } catch(e){}
+            }, 1000);
+        };
+    }
+
+    // ==========================================
+    // 3. دالة المحرك العام للبوتات (تستقبل الإطار والمخزن الخاص به)
+    // ==========================================
+    function createBotEngine(frameEl, offsetDelay) {
+        let step = 0;
+        let lastTime = Date.now() + offsetDelay; // فارق زمني لمنع التصادم
+        let lastProgress = Date.now();
+
+        return function(){
+            try {
+                let w = frameEl.contentWindow;
+                let d = frameEl.contentDocument;
+                if (!w || !d) return;
+                let now = Date.now();
+
+                if (d.body) {
+                    let pageText = d.body.innerText || "";
+                    if ((pageText.includes('Error 1015') || pageText.includes('rate limited')) && step !== 99) {
+                        step = 99; lastTime = now; lastProgress = now;
+                        setTimeout(() => {
+                            try { frameEl.src = location.href; } catch(e){}
+                            step = 0; lastTime = Date.now(); lastProgress = Date.now();
+                        }, 15000);
+                        return;
+                    }
+                    if (step === 99) return;
+                }
+
+                if (step === 0 && (now - lastTime > 5000)) {
+                    let eyeBtn = d.querySelector('.fa-eye') || d.querySelector('#stealth-btn');
+                    if (eyeBtn && eyeBtn.offsetParent !== null) eyeBtn.click();
+                    installSoftLogout(w);
+                    step = 2; lastTime = now; lastProgress = now;
+                }
+                else if (step === 2 && (now - lastTime > getRandomDelay(800))) {
+                    let loginBtn = Array.from(d.querySelectorAll('.th-login-btn')).find(el => el.offsetParent !== null);
+                    if (loginBtn) { loginBtn.click(); step = 3; lastTime = now; lastProgress = now; }
+                }
+                else if (step === 3 && (now - lastTime > getRandomDelay(2000))) {
+                    let usersBtn = d.querySelector('.th-d0-users');
+                    if (usersBtn && usersBtn.offsetParent !== null) { usersBtn.click(); step = 4; lastTime = now; lastProgress = now; }
+                }
+                else if (step === 4 && (now - lastTime > getRandomDelay(700))) {
+                    let si = d.getElementById('usearch');
+                    if (si && si.offsetParent !== null) { si.value = "87"; fire(si); step = 5; lastTime = now; lastProgress = now; }
+                }
+                else if (step === 5 && (now - lastTime > getRandomDelay(700))) {
+                    let us = visible(d, '#users .uzr.uhtml');
+                    if (us.length > 0) { us[0].click(); step = 6; lastTime = now; lastProgress = now; }
+                }
+                else if (step === 6 && (now - lastTime > getRandomDelay(700))) {
+                    let cb = d.querySelector('#upro .fa-times');
+                    if (cb && cb.offsetParent !== null) { cb.click(); step = 7; lastTime = now; lastProgress = now; }
+                }
+                else if (step === 7 && (now - lastTime > getRandomDelay(500))) {
+                    let sb = d.querySelector('.th-d0-settings');
+                    if (sb && sb.offsetParent !== null) { sb.click(); step = 8; lastTime = now; lastProgress = now; }
+                }
+                else if (step === 8 && (now - lastTime > getRandomDelay(500))) {
+                    let lb = d.querySelector('label.SERT');
+                    if (lb && lb.offsetParent !== null) lb.click();
+                    else if (typeof w.logout === 'function') w.logout();
+                    step = 9; lastTime = now; lastProgress = now;
+                }
+                else if (step === 9 && (now - lastTime > getRandomDelay(8000))) {
+                    step = 2; lastTime = now; lastProgress = now;
+                }
+
+                if (now - lastProgress > 45000 && step !== 99) {
+                    try { frameEl.src = location.href; } catch(e){}
+                    step = 0; lastTime = now; lastProgress = now;
+                }
+            } catch(e){}
+        };
+    }
+
+    // تشغيل البوت الأول فوراً، والبوت الثاني بفارق 4 ثوانٍ
+    let runBot1 = createBotEngine(f2, 0);
+    let runBot2 = createBotEngine(f3, 4000);
+
+    setInterval(runBot1, 100);
+    setInterval(runBot2, 100);
+
+    alert('تم تشغيل السكربت الثلاثي!\n- الشاشة العليا: حسابك الأساسي.\n- الشاشتان الثانية والثالثة: بوتان يعملان بالتوازي وبفارق زمني أمن.');
+})();

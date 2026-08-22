@@ -1,0 +1,250 @@
+javascript:(function(){
+    if(window.isAutoBotRunning) return;
+    window.isAutoBotRunning = true;
+
+    document.body.innerHTML = '';
+    document.body.style.margin = '0';
+    document.body.style.overflow = 'hidden';
+
+    let iframe = document.createElement('iframe');
+    iframe.src = location.href;
+    iframe.style.width = '100vw';
+    iframe.style.height = '100vh';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    // --- 1. حيلة الصوت الصامت لمنع السكون ---
+    function keepAwake() {
+        let audio = document.createElement('audio');
+        audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        audio.loop = true;
+        
+        let playAttempt = setInterval(() => {
+            audio.play().then(() => {
+                console.log('الصوت الصامت شغال، المتصفح لن ينام!');
+                clearInterval(playAttempt);
+            }).catch(() => {});
+        }, 1000);
+    }
+    keepAwake();
+
+    // --- 2. واجهة منع قفل الشاشة ---
+    if ('wakeLock' in navigator) {
+        let wakeLock = null;
+        const requestWakeLock = async () => {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+            } catch (err) {}
+        };
+        requestWakeLock();
+        
+        document.addEventListener('visibilitychange', () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                requestWakeLock();
+            }
+        });
+    }
+
+    let step = 0;
+    let lastTime = Date.now();
+    let lastProgress = Date.now();
+
+    // دالة لتوليد تأخير عشوائي بسيط يحاكي العنصر البشري
+    function getRandomDelay(base) {
+        return base + Math.floor(Math.random() * 500);
+    }
+
+    function W(){ try { return iframe.contentWindow; } catch(e){ return null; } }
+    function D(){ try { return iframe.contentWindow.document; } catch(e){ return null; } }
+
+    function fire(el){
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    }
+    function visible(d, sel){
+        return Array.from(d.querySelectorAll(sel)).filter(el => el.offsetParent !== null);
+    }
+
+    // ====== تسجيل خروج صامت ======
+    function installSoftLogout(w){
+        if (!w || w.__softLogoutInstalled) return;
+        w.__softLogoutInstalled = true;
+
+        try {
+            w.__botLoginTab = (w.$ && w.$('#l2').length && w.$('#l2').is(':visible')) ? '#l2' : '#l1';
+        } catch(e){ w.__botLoginTab = '#l1'; }
+
+        var origLogout = (typeof w.logout === 'function') ? w.logout : null;
+
+        w.logout = function(){
+            var oReload = w.location.reload, oReplace = w.location.replace, oAssign = w.location.assign;
+            var locked = true;
+            try { w.location.reload  = function(){ if (locked) return false; }; } catch(e){}
+            try { w.location.replace = function(){ if (locked) return false; }; } catch(e){}
+            try { w.location.assign = function(){ if (locked) return false; }; } catch(e){}
+
+            try { if (origLogout) origLogout(); } catch(e){}
+
+            try {
+                var m = w.TH_CHAT_RECONNECT_MANAGER_INSTANCE;
+                if (m && m.core && m.core.markIntentionalClose) m.core.markIntentionalClose(true);
+            } catch(e){}
+            try { if (typeof w.TH_MARK_INTENTIONAL_DISCONNECT_TIGERHOST === 'function') w.TH_MARK_INTENTIONAL_DISCONNECT_TIGERHOST(true); } catch(e){}
+            try { if (w.x_x && typeof w.x_x.disconnect === 'function') w.x_x.disconnect(); } catch(e){}
+            try { if (w.x_x && typeof w.x_x.close === 'function') w.x_x.close(); } catch(e){}
+            try { w.MY_T = ''; } catch(e){}
+            try { w.TIGERHOST = null; } catch(e){}
+            try { w.M_ROOM = null; } catch(e){}
+
+            setTimeout(function(){
+                locked = false;
+                try { w.location.reload  = oReload; } catch(e){}
+                try { w.location.replace = oReplace; } catch(e){}
+                try { w.location.assign = oAssign; } catch(e){}
+                try {
+                    if (w.$) {
+                        w.$('.nav-tabs a[href="' + (w.__botLoginTab || '#l1') + '"]').tab('show');
+                    }
+                } catch(e){}
+                try {
+                    var d = w.document;
+                    var closePanel = d.querySelector('#dpnl .fa-close') || d.querySelector('#dpnl .thMorePaneBackBtn');
+                    if (closePanel) closePanel.click();
+                } catch(e){}
+            }, 1000);
+        };
+    }
+
+    function runBot(){
+        try {
+            let w = W();
+            let d = D();
+            if (!w || !d) return;
+            let now = Date.now();
+
+            // ====== إدارة خطأ كلاود فلاير ======
+            if (d.body) {
+                let pageText = d.body.innerText || "";
+                if ((pageText.includes('Error 1015') || pageText.includes('rate limited')) && step !== 99) {
+                    step = 99; 
+                    lastTime = now;
+                    lastProgress = now;
+                    setTimeout(() => {
+                        try { iframe.src = location.href; } catch(e){}
+                        step = 0; 
+                        lastTime = Date.now();
+                        lastProgress = Date.now();
+                    }, 15000); 
+                    return;
+                }
+                if (step === 99) return; 
+            }
+
+            // 0. الانتظار للتحميل الأولي
+            if (step === 0 && (now - lastTime > 5000)) {
+                let eyeBtn = d.querySelector('.fa-eye') || d.querySelector('#stealth-btn');
+                if (eyeBtn && eyeBtn.offsetParent !== null) eyeBtn.click();
+                installSoftLogout(w);
+                step = 2;
+                lastTime = now;
+                lastProgress = now;
+            }
+            // 2. الضغط على زر الدخول
+            else if (step === 2 && (now - lastTime > getRandomDelay(800))) {
+                let loginBtn = Array.from(d.querySelectorAll('.th-login-btn')).find(el => el.offsetParent !== null);
+                if (loginBtn) {
+                    loginBtn.click();
+                    step = 3;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 3. فتح قائمة المستخدمين
+            else if (step === 3 && (now - lastTime > getRandomDelay(2000))) {
+                let usersBtn = d.querySelector('.th-d0-users');
+                if (usersBtn && usersBtn.offsetParent !== null) {
+                    usersBtn.click();
+                    step = 4;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 4. البحث عن العضوية 87
+            else if (step === 4 && (now - lastTime > getRandomDelay(700))) {
+                let si = d.getElementById('usearch');
+                if (si && si.offsetParent !== null) {
+                    si.value = "87";
+                    fire(si);
+                    step = 5;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 5. فتح بروفايل 87
+            else if (step === 5 && (now - lastTime > getRandomDelay(700))) {
+                let us = visible(d, '#users .uzr.uhtml');
+                if (us.length > 0) {
+                    us[0].click();
+                    step = 6;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 6. إغلاق بروفايل 87 
+            else if (step === 6 && (now - lastTime > getRandomDelay(700))) {
+                let cb = d.querySelector('#upro .fa-times');
+                if (cb && cb.offsetParent !== null) {
+                    cb.click();
+                    step = 7; 
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 7. فتح الإعدادات 
+            else if (step === 7 && (now - lastTime > getRandomDelay(500))) {
+                let sb = d.querySelector('.th-d0-settings');
+                if (sb && sb.offsetParent !== null) {
+                    sb.click();
+                    step = 8;
+                    lastTime = now;
+                    lastProgress = now;
+                }
+            }
+            // 8. تسجيل خروج صامت
+            else if (step === 8 && (now - lastTime > getRandomDelay(500))) {
+                let lb = d.querySelector('label.SERT');
+                if (lb && lb.offsetParent !== null) {
+                    lb.click(); 
+                } else if (typeof w.logout === 'function') {
+                    w.logout();
+                }
+                step = 9;
+                lastTime = now;
+                lastProgress = now;
+            }
+            // 9. العودة لشاشة الدخول وبدء دورة جديدة (رفع المهلة إلى 8 ثوانٍ لتجنب Rate Limit)
+            else if (step === 9 && (now - lastTime > getRandomDelay(8000))) {
+                step = 2; 
+                lastTime = now;
+                lastProgress = now;
+            }
+        } catch(e) {}
+    }
+
+    setInterval(function(){
+        if (Date.now() - lastProgress > 45000 && step !== 99) {
+            try {
+                iframe.src = location.href;   
+            } catch(e){}
+            step = 0;
+            lastTime = Date.now();
+            lastProgress = Date.now();
+        }
+    }, 2000);
+
+    setInterval(runBot, 100);
+    
+    let alertMsg = 'تم التشغيل بالتوقيت الآمن لمنع Rate Limit تلقائياً.\n\n';
+    alertMsg += '⚠️ تنبيه: المس الشاشة مرة واحدة لتفعيل وضع منع السكون.';
+    alert(alertMsg);
+})();
